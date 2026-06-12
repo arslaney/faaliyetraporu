@@ -20263,6 +20263,7 @@ window.SOMPO_BAND="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAfQCAIAAAA
 
 </script>
 <script>
+const APP_VER='v3.0';
 /* ===================== STATE ===================== */
 let D = JSON.parse(JSON.stringify(window.DEFAULT_DATA));
 const RED="C8102E", INK="1A1A1A", GREY="6B6B6B";
@@ -20380,7 +20381,10 @@ function ozetFields(){
   o.maddeler.forEach((m,i)=>{
     const c=document.createElement('div');c.className='cmt';
     c.innerHTML=`<div class="row"><b style="font-size:11px;color:var(--muted)">MADDE ${i+1}</b><button class="del" title="Sil">✕</button></div>`;
-    c.querySelector('.del').onclick=()=>{o.maddeler.splice(i,1);buildEditor();renderPreview();};
+    c.querySelector('.del').onclick=()=>{o.maddeler.splice(i,1);
+// Sürüm rozeti (hangi sürüm canlıda — tek bakışta)
+(function(){const tb=document.querySelector('.toolbar');if(tb){const b=document.createElement('span');b.id='verbadge';b.textContent=APP_VER;b.style.cssText='margin-left:auto;align-self:center;font-size:11px;font-weight:800;color:#fff;background:#C8102E;border-radius:10px;padding:3px 10px;letter-spacing:1px';tb.appendChild(b);}console.log('Faaliyet Raporu Platformu '+APP_VER);})();
+buildEditor();renderPreview();};
     c.appendChild(txt('Başlık',m.baslik,v=>m.baslik=v));
     c.appendChild(txt('Metin',m.metin,v=>m.metin=v,true));
     w.appendChild(c);

@@ -20557,7 +20557,8 @@ function importExcel(ev){
   rd.onload=e=>{try{
     const wb=XLSX.read(e.target.result,{type:'binary'});
     if(wb.Sheets['Kapak']){const a=XLSX.utils.sheet_to_json(wb.Sheets['Kapak'],{header:1});a.forEach(r=>{if(r[0]==='Dönem')D.kapak.donem=r[1];if(r[0]==='Hazırlayan')D.kapak.hazirlayan=r[1];if(r[0]==='Tarih')D.kapak.tarih=String(r[1]);if(r[0]==='Departman')D.kapak.departman=r[1];});}
-    SECTIONS.forEach(s=>{const sh=wb.Sheets[s.key.slice(0,28)];if(!sh)return;
+    const bozuk=[];
+    SECTIONS.forEach(s=>{try{const sh=wb.Sheets[s.key.slice(0,28)];if(!sh)return;
       let a=XLSX.utils.sheet_to_json(sh,{header:1}).filter(r=>r.length);
       // Başlık bandı / açıklama satırlarını atla: gerçek tablo başlığı, 2+ dolu sütunu olan
       // ve "ℹ" ile başlamayan ilk satırdır.
@@ -20569,16 +20570,16 @@ function importExcel(ev){
       let hi=0; while(hi<a.length && isBanner(a[hi])) hi++;
       a=a.slice(hi);
       if(!a.length)return;
-      const t=D[s.key].tablo;t.basliklar=a[0].map(String);
+      const t=D[s.key].tablo;t.basliklar=Array.from(a[0]).map(c=>String(c==null?'':c));
       // Hücre normalleştirme: yüzde ondalıkları "%x,y", büyük sayılar binlik ayraçlı
-      const fmtCell=(c,ci)=>{
+      const fmtCell=(c)=>{
         if(c===undefined||c===null)return '';
         if(typeof c==='number'){
-          // 0-1 arası ve tam sayı değilse yüzde kabul et
+          // Yıl (1900-2100) ve dönem kodu (YYYYMM) binlik ayraçsız kalsın
+          if(Number.isInteger(c) && ((c>=1900&&c<=2100)||(c>=190001&&c<=210012))) return String(c);
           if(c>-1 && c<3 && !Number.isInteger(c)){
             return '%'+ (Math.round(c*1000)/10).toString().replace('.',',');
           }
-          // büyük sayı → binlik ayraçlı (TR)
           if(Math.abs(c)>=1000){
             return c.toLocaleString('tr-TR',{maximumFractionDigits:0});
           }
@@ -20586,11 +20587,14 @@ function importExcel(ev){
         }
         return String(c);
       };
-      let body=a.slice(1).map(r=>r.map((c,ci)=>fmtCell(c,ci)));
+      // Sabit genişlik: delikli (sparse) satırları başlık sayısına tamamla, boşları '' yap
+      const ncol=t.basliklar.length;
+      let body=a.slice(1).map(r=>{const out=[];const w=Math.max(ncol,r.length);for(let ci=0;ci<w;ci++)out.push(fmtCell(r[ci]));return out;});
       body=body.filter(r=>r.some(c=>String(c).trim()!==''));
       if(t.toplam&&body.length&&String(body[body.length-1][0]).includes('Total')){t.toplam=body.pop();}
       fixRatios(s.key,body); if(t.toplam)fixRatios(s.key,[t.toplam]);
-      t.satirlar=body;});
+      t.satirlar=body;}catch(err){bozuk.push((s.title||s.key)+': '+err.message);}});
+    if(bozuk.length)setTimeout(()=>toast('Şu bölümler yüklenemedi: '+bozuk.join(' | '),true),600);
     buildEditor();renderPreview();
     toast('Excel yüklendi ✓');
     setTimeout(()=>{

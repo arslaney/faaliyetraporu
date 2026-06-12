@@ -20537,6 +20537,20 @@ function exportExcel(){
     downloadBlob(new Blob([u8],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Rapor_Sablonu_RENKLI.xlsx');
   }catch(e){toast('Excel indirme hatası: '+e.message,true);}
 }
+/* ===================== ORAN ONARIMI (Excel formülü bozuk olsa bile) ===================== */
+const trNum=v=>{const s=String(v==null?'':v).trim();if(!s)return null;const n=parseFloat(s.replace(/\./g,'').replace(',','.').replace('%',''));return isNaN(n)?null:n;};
+const pctFmt=x=>'%'+(Math.round(x*1000)/10).toString().replace('.',',');
+const RATIO_FIX={
+  gwp_acente:[{col:3,calc:r=>{const a=trNum(r[1]),b=trNum(r[2]);return(a&&b!=null)?b/a-1:null;}}],
+  gwp_banka:[{col:3,calc:r=>{const a=trNum(r[1]),b=trNum(r[2]);return(a&&b!=null)?b/a-1:null;}}],
+  kanal_bazli_yeni_is:[{col:3,calc:r=>{const a=trNum(r[1]),b=trNum(r[2]);return(a&&b!=null)?b/a-1:null;}}],
+  hit_ratio_acente:[{col:5,calc:r=>{const p=trNum(r[3]),t=trNum(r[4]);return(t&&p!=null)?p/t:null;}}],
+  hit_ratio_banka:[{col:5,calc:r=>{const p=trNum(r[3]),t=trNum(r[4]);return(t&&p!=null)?p/t:null;}}],
+  kio_acente_hit_ratio:[{col:5,calc:r=>{const p=trNum(r[3]),t=trNum(r[4]);return(t&&p!=null)?p/t:null;}}],
+  acente_yenileme:[{col:4,calc:r=>{const a=trNum(r[2]),b=trNum(r[3]);return(a&&b!=null)?b/a:null;}},{col:7,calc:r=>{const a=trNum(r[5]),b=trNum(r[6]);return(a&&b!=null)?b/a:null;}}]
+};
+function fixRatios(key,rows){const cfg=RATIO_FIX[key];if(!cfg||!rows)return;rows.forEach(r=>{cfg.forEach(c=>{if(r&&r.length>c.col){const v=c.calc(r);if(v!=null&&isFinite(v))r[c.col]=pctFmt(v);}});});}
+
 function importExcel(ev){
   const file=ev.target.files[0];if(!file)return;
   const rd=new FileReader();
@@ -20575,6 +20589,7 @@ function importExcel(ev){
       let body=a.slice(1).map(r=>r.map((c,ci)=>fmtCell(c,ci)));
       body=body.filter(r=>r.some(c=>String(c).trim()!==''));
       if(t.toplam&&body.length&&String(body[body.length-1][0]).includes('Total')){t.toplam=body.pop();}
+      fixRatios(s.key,body); if(t.toplam)fixRatios(s.key,[t.toplam]);
       t.satirlar=body;});
     buildEditor();renderPreview();
     toast('Excel yüklendi ✓');
